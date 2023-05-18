@@ -1,5 +1,17 @@
 import React, { useState } from "react";
 import Table from "./Table";
+import * as Yup from "yup";
+const userSchema = Yup.object().shape({
+  name: Yup.string()
+    .required("Name is required")
+    .min(5, "Name must be at least 5 characters"),
+  mobile: Yup.string()
+    .required("Mobile number is required")
+    .min(10, "Mobile number must be 10 digits"),
+  email: Yup.string()
+    .required("Email is required")
+    .email("Invalid email format"),
+});
 
 const Form = () => {
   const [form, setform] = useState({
@@ -10,23 +22,37 @@ const Form = () => {
   const [editingIndex, setEditingIndex] = useState(-1);
   const [record, setrecord] = useState([]);
   const [newRecord, setnewRecord] = useState([]);
+  const [validationErrors, setValidationErrors] = useState({});
   const handleChange = (e) => {
     const name = e.target.name;
     const value = e.target.value;
     setform({ ...form, [name]: value });
     // console.log(form);
+    setValidationErrors({ ...validationErrors, [name]: "" });
   };
   const submit = () => {
-    if (editingIndex === -1) {
-      setrecord([...record, form]);
-    } else {
-      const updatedRecord = [...record];
-      updatedRecord[editingIndex] = form;
-      setrecord(updatedRecord);
-      setEditingIndex(-1);
-    }
-    setform({ name: "", mobile: "", email: "" });
-    console.log(record);
+    userSchema
+      .validate(form, { abortEarly: false })
+      .then(() => {
+        if (editingIndex === -1) {
+          setrecord([...record, form]);
+        } else {
+          const updatedRecord = [...record];
+          updatedRecord[editingIndex] = form;
+          setrecord(updatedRecord);
+          setEditingIndex(-1);
+        }
+        setform({ name: "", mobile: "", email: "" });
+        setValidationErrors({});
+      })
+      .catch((error) => {
+        const errors = {};
+        error.inner.forEach((err) => {
+          errors[err.path] = err.message;
+        });
+        setValidationErrors(errors);
+        console.log(validationErrors);
+      });
   };
   const deleteRecord = (i) => {
     const updateditems = record.filter((e, index) => {
@@ -64,6 +90,13 @@ const Form = () => {
                   value={form.name}
                   onChange={handleChange}
                 />
+                {validationErrors.name ? (
+                  <p className="text-red-400 font-semibold mt-2">
+                    {validationErrors.name}
+                  </p>
+                ) : (
+                  ""
+                )}
               </div>
               <div class="my-8">
                 <label
@@ -80,6 +113,11 @@ const Form = () => {
                   value={form.mobile}
                   onChange={handleChange}
                 />
+                {validationErrors.mobile && (
+                  <p className="text-red-400 font-semibold mt-2">
+                    {validationErrors.mobile}
+                  </p>
+                )}
               </div>
               <div class="my-8">
                 <label
@@ -96,6 +134,11 @@ const Form = () => {
                   value={form.email}
                   onChange={handleChange}
                 />
+                {validationErrors.email && (
+                  <p className="text-red-400 font-semibold mt-2">
+                    {validationErrors.email}
+                  </p>
+                )}
               </div>
 
               <div class="flex items-center justify-between">
@@ -110,11 +153,15 @@ const Form = () => {
             </form>
           </div>
           <div className="mt-20">
-            <Table
-              editRecord={editRecord}
-              deleteRecord={deleteRecord}
-              data={record}
-            />
+            {record.length !== 0 ? (
+              <Table
+                editRecord={editRecord}
+                deleteRecord={deleteRecord}
+                data={record}
+              />
+            ) : (
+              ""
+            )}
           </div>
         </div>
       </div>
